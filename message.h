@@ -7,7 +7,7 @@
 class Message
 {
 public:
-    explicit Message(qulonglong time, QString author_nickname, QString msg);
+    explicit Message(qulonglong time, QString author_nickname, QHostAddress, QString msg);
 
     qulonglong getTime() const;
     void setTime(const qulonglong &value);

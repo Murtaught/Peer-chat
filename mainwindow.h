@@ -52,15 +52,15 @@ private:
     void keyPressEvent(QKeyEvent *event);
 
     // methods:
-    void addSystemMessage(const QString &message);
-    void addMessageToHistory(const QString &author, const QString &message);
+    void addSystemMessageToWidget(const QString &message);
+    void addMessageToWidget(const QString &author, const QString &message);
 
     void sendString(QString const& what, QHostAddress const& where);
     void sendToEverybody(QString const& what);
 
-    bool add_to_chat_history(qulonglong time, QString author, QString msg);
+    bool addToChatHistory(qulonglong time, QString author, QString msg);
 
-    void update_user_list_widget();
+    void updateUserListWidget();
 
     QString responseString();
 
@@ -100,6 +100,7 @@ private slots:
     void sendQuit();
 
     void delieverMessages();
+    void delieverConfirmed(QString nickname, qulonglong time);
 
     void addPeerToList(QString const& nickname, QHostAddress const& address);
     void keepPeerAlive(QHostAddress const& peer_address);

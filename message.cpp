@@ -9,11 +9,6 @@ Message::Message(qulonglong time, QString author_nickname,
 {
 }
 
-QString Message::getDatagram()
-{
-    return
-}
-
 QString Message::getMsg() const
 {
     return msg;
