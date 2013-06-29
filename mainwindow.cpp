@@ -43,13 +43,19 @@ MainWindow::MainWindow(QWidget *parent)
 
     QList<QHostAddress> addr = QNetworkInterface::allAddresses();
 
+    //addSystemMessageToWidget("");
+
     if ( addr.size() < 3 )
     {
         addSystemMessageToWidget(tr("Network interface wasn\'t found!"));
         my_address = QHostAddress::LocalHost;
     }
     else
+    {
         my_address = addr[2];
+        addSystemMessageToWidget(tr("Hello ") + my_nickname + ", your network address is " +
+                                 my_address.toString());
+    }
 
     // Connecting everything
     connect(send_button, SIGNAL(clicked()), this, SLOT(sendButtonPressed()));
@@ -101,10 +107,13 @@ void MainWindow::sendString(const QString &what, const QHostAddress &where)
     datagram.append("\r\n");
 
     socket->writeDatagram(datagram.data(), datagram.size(), where, PORT);
+
+    qDebug() << "Wrote dgram: " << what;
 }
 
 void MainWindow::sendToEverybody(const QString &what)
 {
+    qDebug() << "Sending to everybody: " << what;
     for (int i = 0; i < peer_list.size(); ++i)
         sendString(what, peer_list[i]->getAddress());
 }
@@ -147,7 +156,7 @@ void MainWindow::keepPeerAlive(const QHostAddress &peer_address)
         }
 }
 
-bool MainWindow::addToChatHistory(qulonglong time, QString author, QString msg)
+bool MainWindow::addToChatHistory(time_t time, QString author, QString msg)
 {
     for (int i = chat_history.size() - 1; i >= 0 && chat_history[i].first >= time; --i)
         if ( chat_history[i].first == time && chat_history[i].second == author )
@@ -162,8 +171,9 @@ bool MainWindow::addToChatHistory(qulonglong time, QString author, QString msg)
 
 void MainWindow::updateUserListWidget()
 {
-    user_list_widget->clear();
+    qDebug() << "User list widget updated";
 
+    user_list_widget->clear();
     for (int i = 0; i < peer_list.size(); ++i)
         user_list_widget->addItem( peer_list[i]->getFormattedString() );
 }
@@ -176,6 +186,7 @@ void MainWindow::removePeerFromList(QHostAddress peer_address)
             qDebug() << peer_list[i]->getNickname()
                      << peer_list[i]->getAddress().toString() << "removed from list";
 
+            addSystemMessageToWidget(peer_list[i]->getNickname() + " left");
             peer_list.remove(i);
             updateUserListWidget();
             return;
@@ -198,7 +209,7 @@ void MainWindow::sendButtonPressed()
     message_line_edit->clear();
     message_line_edit->setFocus();
 
-    qulonglong t = time(NULL);
+    time_t t = time(NULL);
 
     addToChatHistory(t, my_nickname, msg_text);
 
@@ -254,16 +265,20 @@ void MainWindow::handleSocketMessage()
     {
         if ( sender_address != my_address )
         {
-            //QHostAddress author_ip( list[0] );
+            QHostAddress author_address( list[0] );
             QString      author_nickname( list[1] );
-            qulonglong   time( list[2].toULongLong() );
+            time_t       time( list[2].toULongLong() );
 
-            QString msg;
-            for (int i = 3; i < list.size(); ++i)
-                msg += list[i];
+            QString msg = list[3];
+            for (int i = 4; i < list.size(); ++i)
+                msg += " " + list[i];
 
             if ( addToChatHistory(time, author_nickname, msg) )
-                sendToEverybody(text);
+            {
+                Message message(time, author_nickname, author_address, msg);
+                undelivered_messages.push_back(message);
+                delieverMessages();
+            }
 
             // Sending accept back
             sendAccepted(sender_address, author_nickname, time);
@@ -272,9 +287,9 @@ void MainWindow::handleSocketMessage()
     else if ( cmd == "ACCEPTED" )
     {
         QString nickname = list[0];
-        qulonglong time  = list[1].toULongLong();
+        time_t time  = list[1].toULongLong();
 
-
+        delieverConfirmed(nickname, time);
     }
     else if ( cmd == "JOIN" )
     {
@@ -304,6 +319,7 @@ void MainWindow::sendHello()
 
 void MainWindow::sendResponse(QHostAddress to_whom)
 {
+    qDebug() << "Sending RESPONSE to " << to_whom.toString();
     sendString(responseString(), to_whom);
 }
 
@@ -312,7 +328,7 @@ void MainWindow::sendJoin(const QString &newcomer_nickname, const QHostAddress &
     sendToEverybody("JOIN " + newcomer_address.toString() + " " + newcomer_nickname);
 }
 
-void MainWindow::sendMessage(qulonglong time, QString msg)
+void MainWindow::sendMessage(time_t time, QString msg)
 {
     sendToEverybody("MESSAGE " + my_address.toString() + " " + my_nickname + " " +
                     QString::number(time) + " " + msg);
@@ -324,7 +340,7 @@ void MainWindow::sendMessage(const Message &msg)
                     " " + QString::number(msg.getTime()) + " " + msg.getMsg());
 }
 
-void MainWindow::sendAccepted(QHostAddress to_whom, QString nickname, qulonglong time)
+void MainWindow::sendAccepted(QHostAddress to_whom, QString nickname, time_t time)
 {
     sendString("ACCEPTED " + nickname + " " + QString::number(time), to_whom);
 }
@@ -341,16 +357,20 @@ void MainWindow::sendQuit()
 
 void MainWindow::delieverMessages()
 {
+    qDebug() << "Sending " << undelivered_messages.size() << " undelievered messages";
+
     for (int i = 0; i < undelivered_messages.size(); ++i)
         sendMessage(undelivered_messages[i]);
 }
 
-void MainWindow::delieverConfirmed(QString nickname, qulonglong time)
+void MainWindow::delieverConfirmed(QString nickname, time_t time)
 {
     for (int i = 0; i < undelivered_messages.size(); ++i)
         if ( undelivered_messages[i].getAuthorNickname() == nickname &&
              undelivered_messages[i].getTime() == time )
         {
+            qDebug() << "Deliever of message " << undelivered_messages[i].getAuthorNickname() <<
+                        undelivered_messages[i].getTime() << " confirmed!!!";
             undelivered_messages.removeAt(i);
             return;
         }

@@ -34,11 +34,11 @@ class MainWindow : public QWidget
 {
     Q_OBJECT
 
-    typedef QVector< QPair<qulonglong, QString> > HistoryType;
+    typedef QVector< QPair<time_t, QString> > HistoryType;
 
     static const int PORT               = 3141;
     static const int SEND_INTERVAL      = 1000;           // 1000 ms = 1 s
-    static const int HELLO_INTERVAL     = 30 * 1000;      // 30 s
+    static const int HELLO_INTERVAL     = 10 * 1000;      // 10 s
     static const int KEEPALIVE_INTERVAL = 2 * 60 * 1000;  // 2 min
     static const int DELIEVER_INTERVAL  = 60 * 1000;      // 1 min
 
@@ -58,7 +58,7 @@ private:
     void sendString(QString const& what, QHostAddress const& where);
     void sendToEverybody(QString const& what);
 
-    bool addToChatHistory(qulonglong time, QString author, QString msg);
+    bool addToChatHistory(time_t time, QString author, QString msg);
 
     void updateUserListWidget();
 
@@ -93,21 +93,18 @@ private slots:
     void sendHello();
     void sendResponse(QHostAddress to_whom);
     void sendJoin(QString const& newcomer_nickname, QHostAddress const& newcomer_address);
-    void sendMessage(qulonglong time, QString msg);
+    void sendMessage(time_t time, QString msg);
     void sendMessage(const Message &msg);
-    void sendAccepted(QHostAddress to_whom, QString nickname, qulonglong time);
+    void sendAccepted(QHostAddress to_whom, QString nickname, time_t time);
     void sendKeepalive();
     void sendQuit();
 
     void delieverMessages();
-    void delieverConfirmed(QString nickname, qulonglong time);
+    void delieverConfirmed(QString nickname, time_t time);
 
     void addPeerToList(QString const& nickname, QHostAddress const& address);
     void keepPeerAlive(QHostAddress const& peer_address);
     void removePeerFromList(QHostAddress peer_address);
-
-
-
 };
 
 #endif // MAINWINDOW_H

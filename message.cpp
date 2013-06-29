@@ -1,6 +1,6 @@
 #include "message.h"
 
-Message::Message(qulonglong time, QString author_nickname,
+Message::Message(time_t time, QString author_nickname,
                  QHostAddress author_address, QString msg) :
     time(time),
     author_nickname(author_nickname),
@@ -19,12 +19,12 @@ void Message::setMsg(const QString &value)
     msg = value;
 }
 
-qulonglong Message::getTime() const
+time_t Message::getTime() const
 {
     return time;
 }
 
-void Message::setTime(const qulonglong &value)
+void Message::setTime(const time_t &value)
 {
     time = value;
 }

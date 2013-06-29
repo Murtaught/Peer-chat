@@ -1,16 +1,17 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
+#include <ctime>
 #include <QString>
 #include <QHostAddress>
 
 class Message
 {
 public:
-    explicit Message(qulonglong time, QString author_nickname, QHostAddress, QString msg);
+    explicit Message(time_t time, QString author_nickname, QHostAddress, QString msg);
 
-    qulonglong getTime() const;
-    void setTime(const qulonglong &value);
+    time_t getTime() const;
+    void setTime(const time_t &value);
 
     QString getAuthorNickname() const;
     void setAuthorNickname(const QString &value);
@@ -22,7 +23,7 @@ public:
     void setAuthorAddress(const QHostAddress &value);
 
 private:
-    qulonglong   time;
+    time_t   time;
     QString      author_nickname;
     QHostAddress author_address;
     QString      msg;
