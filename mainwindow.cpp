@@ -5,6 +5,8 @@
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
 {
+    // initialisation lists look ugly
+
     // Windgets
     messages_widget   = new QTextEdit(this);
     message_line_edit = new QLineEdit(this);
@@ -12,12 +14,12 @@ MainWindow::MainWindow(QWidget *parent)
     send_button       = new QPushButton(tr("Send"), this);
 
     // Objects
-    socket = new QUdpSocket(this);
+    socket            = new QUdpSocket(this);
 
-    hello_timer     = new QTimer(this);
-    keepalive_timer = new QTimer(this);
-    deliever_timer  = new QTimer(this);
-    send_timer      = new QTimer(this);
+    hello_timer       = new QTimer(this);
+    keepalive_timer   = new QTimer(this);
+    deliever_timer    = new QTimer(this);
+    send_timer        = new QTimer(this);
     send_timer->setSingleShot(true);
 
     // Layout-related
@@ -43,7 +45,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     QList<QHostAddress> addr = QNetworkInterface::allAddresses();
 
-    //addSystemMessageToWidget("");
+    qDebug() << "Avaliable network interfaces:";
+    for (int i = 0; i < addr.size(); ++i)
+        qDebug() << addr[i].toString();
 
     if ( addr.size() < 3 )
     {
@@ -53,8 +57,8 @@ MainWindow::MainWindow(QWidget *parent)
     else
     {
         my_address = addr[2];
-        addSystemMessageToWidget(tr("Hello ") + my_nickname + ", your network address is " +
-                                 my_address.toString());
+        addSystemMessageToWidget(tr("Hello ") + my_nickname + ", your network "
+                                 "address is " + my_address.toString());
     }
 
     // Connecting everything
@@ -307,8 +311,6 @@ void MainWindow::handleSocketMessage()
     {
         keepPeerAlive(sender_address);
     }
-
-
 }
 
 void MainWindow::sendHello()
