@@ -94,17 +94,17 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         QWidget::keyPressEvent(event);
 }
 
-void MainWindow::addSystemMessageToWidget(const QString &message)
+void MainWindow::addSystemMessageToWidget(QString message)
 {
     messages_widget->append("<b><font color=\"red\">" + message + "<\font><\b>\n");
 }
 
-void MainWindow::addMessageToWidget(const QString &author, const QString &message)
+void MainWindow::addMessageToWidget(QString author, QString message)
 {
     messages_widget->append("<b>" + author + ": </b> <i><font color=\"blue\">" + message + "</font></i>\n");
 }
 
-void MainWindow::sendString(const QString &what, const QHostAddress &where)
+void MainWindow::sendString(QString what, QHostAddress where)
 {
     QByteArray datagram;
     datagram.append(what);
@@ -115,14 +115,14 @@ void MainWindow::sendString(const QString &what, const QHostAddress &where)
     qDebug() << "Wrote dgram: " << what;
 }
 
-void MainWindow::sendToEverybody(const QString &what)
+void MainWindow::sendToEverybody(QString what)
 {
     qDebug() << "Sending to everybody: " << what;
     for (int i = 0; i < peer_list.size(); ++i)
         sendString(what, peer_list[i]->getAddress());
 }
 
-void MainWindow::addPeerToList(const QString &nickname, const QHostAddress &address)
+void MainWindow::addPeerToList(QString nickname, QHostAddress address)
 {
     Peer *newcomer = new Peer(nickname, address, this);
 
@@ -147,7 +147,7 @@ void MainWindow::addPeerToList(const QString &nickname, const QHostAddress &addr
     addSystemMessageToWidget(nickname + " " + tr("connected"));
 }
 
-void MainWindow::keepPeerAlive(const QHostAddress &peer_address)
+void MainWindow::keepPeerAlive(QHostAddress peer_address)
 {
     for (int i = 0; i < peer_list.size(); ++i)
         if (peer_list[i]->getAddress() == peer_address)
@@ -325,7 +325,7 @@ void MainWindow::sendResponse(QHostAddress to_whom)
     sendString(responseString(), to_whom);
 }
 
-void MainWindow::sendJoin(const QString &newcomer_nickname, const QHostAddress &newcomer_address)
+void MainWindow::sendJoin(QString newcomer_nickname, QHostAddress newcomer_address)
 {
     sendToEverybody("JOIN " + newcomer_address.toString() + " " + newcomer_nickname);
 }
@@ -336,7 +336,7 @@ void MainWindow::sendMessage(time_t time, QString msg)
                     QString::number(time) + " " + msg);
 }
 
-void MainWindow::sendMessage(const Message &msg)
+void MainWindow::sendMessage(Message msg)
 {
     sendToEverybody("MESSAGE " + msg.getAuthorAddress().toString() + " " + msg.getAuthorNickname() +
                     " " + QString::number(msg.getTime()) + " " + msg.getMsg());

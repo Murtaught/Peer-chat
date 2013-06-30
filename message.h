@@ -11,19 +11,19 @@ public:
     explicit Message(time_t time, QString author_nickname, QHostAddress, QString msg);
 
     time_t getTime() const;
-    void setTime(const time_t &value);
+    void setTime(time_t value);
 
     QString getAuthorNickname() const;
-    void setAuthorNickname(const QString &value);
+    void setAuthorNickname(QString value);
 
     QString getMsg() const;
-    void setMsg(const QString &value);
+    void setMsg(QString value);
 
     QHostAddress getAuthorAddress() const;
-    void setAuthorAddress(const QHostAddress &value);
+    void setAuthorAddress(QHostAddress value);
 
 private:
-    time_t   time;
+    time_t       time;
     QString      author_nickname;
     QHostAddress author_address;
     QString      msg;

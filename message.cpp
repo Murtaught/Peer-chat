@@ -14,7 +14,7 @@ QString Message::getMsg() const
     return msg;
 }
 
-void Message::setMsg(const QString &value)
+void Message::setMsg(QString value)
 {
     msg = value;
 }
@@ -24,7 +24,7 @@ time_t Message::getTime() const
     return time;
 }
 
-void Message::setTime(const time_t &value)
+void Message::setTime(time_t value)
 {
     time = value;
 }
@@ -34,7 +34,7 @@ QString Message::getAuthorNickname() const
     return author_nickname;
 }
 
-void Message::setAuthorNickname(const QString &value)
+void Message::setAuthorNickname(QString value)
 {
     author_nickname = value;
 }
@@ -44,7 +44,7 @@ QHostAddress Message::getAuthorAddress() const
     return author_address;
 }
 
-void Message::setAuthorAddress(const QHostAddress &value)
+void Message::setAuthorAddress(QHostAddress value)
 {
     author_address = value;
 }

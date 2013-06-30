@@ -13,8 +13,8 @@ class Peer : public QObject
     static const int KEEP_ALIVE_FOR = 10 * 60 * 1000; // 10 minutes
 
 public:
-    explicit Peer(QString const& nickname,
-                  QHostAddress const& address,
+    explicit Peer(QString nickname,
+                  QHostAddress address,
                   QObject *parent = 0);
 
     void resetKeepaliveTimer();
@@ -22,10 +22,10 @@ public:
     QString getFormattedString();
     
     QString getNickname() const;
-    void setNickname(const QString &value);
+    void setNickname(QString value);
 
     QHostAddress getAddress() const;
-    void setAddress(const QHostAddress &value);
+    void setAddress(QHostAddress value);
 
 signals:
     void peerDied(QHostAddress address);

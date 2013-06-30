@@ -52,11 +52,11 @@ private:
     void keyPressEvent(QKeyEvent *event);
 
     // methods:
-    void addSystemMessageToWidget(const QString &message);
-    void addMessageToWidget(const QString &author, const QString &message);
+    void addSystemMessageToWidget(QString message);
+    void addMessageToWidget(QString author, QString message);
 
-    void sendString(QString const& what, QHostAddress const& where);
-    void sendToEverybody(QString const& what);
+    void sendString(QString what, QHostAddress where);
+    void sendToEverybody(QString what);
 
     bool addToChatHistory(time_t time, QString author, QString msg);
 
@@ -92,9 +92,9 @@ private slots:
 
     void sendHello();
     void sendResponse(QHostAddress to_whom);
-    void sendJoin(QString const& newcomer_nickname, QHostAddress const& newcomer_address);
+    void sendJoin(QString newcomer_nickname, QHostAddress newcomer_address);
     void sendMessage(time_t time, QString msg);
-    void sendMessage(const Message &msg);
+    void sendMessage(Message msg);
     void sendAccepted(QHostAddress to_whom, QString nickname, time_t time);
     void sendKeepalive();
     void sendQuit();
@@ -102,8 +102,8 @@ private slots:
     void delieverMessages();
     void delieverConfirmed(QString nickname, time_t time);
 
-    void addPeerToList(QString const& nickname, QHostAddress const& address);
-    void keepPeerAlive(QHostAddress const& peer_address);
+    void addPeerToList(QString nickname, QHostAddress address);
+    void keepPeerAlive(QHostAddress peer_address);
     void removePeerFromList(QHostAddress peer_address);
 };
 
