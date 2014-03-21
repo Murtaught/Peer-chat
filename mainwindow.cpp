@@ -2,6 +2,9 @@
 
 #include <QtDebug>
 
+#include <QDir>
+#include <QPair>
+
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
 {
@@ -9,7 +12,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Windgets
     messages_widget   = new QTextEdit(this);
-    message_line_edit = new QLineEdit(this);
+    input_line        = new QLineEdit(this);
     user_list_widget  = new QListWidget(this);
     send_button       = new QPushButton(tr("Send"), this);
 
@@ -18,7 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     hello_timer       = new QTimer(this);
     keepalive_timer   = new QTimer(this);
-    deliever_timer    = new QTimer(this);
+    deliver_timer     = new QTimer(this);
     send_timer        = new QTimer(this);
     send_timer->setSingleShot(true);
 
@@ -27,7 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     layout->addWidget(messages_widget,   0, 0);
     layout->addWidget(user_list_widget,  0, 1);
-    layout->addWidget(message_line_edit, 1, 0);
+    layout->addWidget(input_line, 1, 0);
     layout->addWidget(send_button,       1, 1);
 
     layout->setColumnStretch(0, 2); // 2 : 1
@@ -36,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Tweaking widgets
     setWindowTitle(tr("Network peer-to-peer chat"));
 
-    message_line_edit->setFocus();
+    input_line->setFocus();
     messages_widget->setReadOnly(true);
 
     // User information and network routines
@@ -46,8 +49,10 @@ MainWindow::MainWindow(QWidget *parent)
     QList<QHostAddress> addr = QNetworkInterface::allAddresses();
 
     qDebug() << "Avaliable network interfaces:";
-    for (int i = 0; i < addr.size(); ++i)
-        qDebug() << addr[i].toString();
+    foreach (QHostAddress a, addr)
+    {
+        qDebug() << a.toString();
+    }
 
     if ( addr.size() < 3 )
     {
@@ -56,7 +61,8 @@ MainWindow::MainWindow(QWidget *parent)
     }
     else
     {
-        my_address = addr[2];
+        // KOSTYL
+        my_address = addr[ 1 ];
         addSystemMessageToWidget(tr("Hello ") + my_nickname + ", your network "
                                  "address is " + my_address.toString());
     }
@@ -66,7 +72,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(send_timer, SIGNAL(timeout()),  this, SLOT(sendTimerExpired()));
     connect(hello_timer, SIGNAL(timeout()), this, SLOT(sendHello()));
     connect(keepalive_timer, SIGNAL(timeout()), this, SLOT(sendKeepalive()));
-    connect(deliever_timer, SIGNAL(timeout()), this, SLOT(delieverMessages()));
+    connect(deliver_timer, SIGNAL(timeout()), this, SLOT(delieverMessages()));
 
     connect(socket, SIGNAL(readyRead()), this, SLOT(handleSocketMessage()));
 
@@ -75,7 +81,11 @@ MainWindow::MainWindow(QWidget *parent)
     sendHello();
 
     keepalive_timer->start(KEEPALIVE_INTERVAL);
-    deliever_timer->start(DELIEVER_INTERVAL);
+    deliver_timer->start(DELIEVER_INTERVAL);
+
+    updateUserListWidget();
+
+    qDebug() << "Constructor execution finished";
 }
 
 MainWindow::~MainWindow()
@@ -102,24 +112,6 @@ void MainWindow::addSystemMessageToWidget(QString message)
 void MainWindow::addMessageToWidget(QString author, QString message)
 {
     messages_widget->append("<b>" + author + ": </b> <i><font color=\"blue\">" + message + "</font></i>\n");
-}
-
-void MainWindow::sendString(QString what, QHostAddress where)
-{
-    QByteArray datagram;
-    datagram.append(what);
-    datagram.append("\r\n");
-
-    socket->writeDatagram(datagram.data(), datagram.size(), where, PORT);
-
-    qDebug() << "Wrote dgram: " << what;
-}
-
-void MainWindow::sendToEverybody(QString what)
-{
-    qDebug() << "Sending to everybody: " << what;
-    for (int i = 0; i < peer_list.size(); ++i)
-        sendString(what, peer_list[i]->getAddress());
 }
 
 void MainWindow::addPeerToList(QString nickname, QHostAddress address)
@@ -175,11 +167,16 @@ bool MainWindow::addToChatHistory(time_t time, QString author, QString msg)
 
 void MainWindow::updateUserListWidget()
 {
-    qDebug() << "User list widget updated";
-
     user_list_widget->clear();
-    for (int i = 0; i < peer_list.size(); ++i)
-        user_list_widget->addItem( peer_list[i]->getFormattedString() );
+
+    user_list_widget->addItem( my_nickname + " (" + my_address.toString() + ")" );
+
+    foreach (Peer *p, peer_list)
+    {
+        user_list_widget->addItem( p->getFormattedString() );
+    }
+
+    qDebug() << "User list widget updated";
 }
 
 void MainWindow::removePeerFromList(QHostAddress peer_address)
@@ -197,21 +194,11 @@ void MainWindow::removePeerFromList(QHostAddress peer_address)
         }
 }
 
-QString MainWindow::responseString()
-{
-    QString msg = "RESPONSE " + my_nickname;
-    for (int i = 0; i < peer_list.size(); ++i)
-        msg += " " + peer_list[i]->getAddress().toString() +
-               " " + peer_list[i]->getNickname();
-
-    return msg;
-}
-
 void MainWindow::sendButtonPressed()
 {
-    QString msg_text = message_line_edit->text();
-    message_line_edit->clear();
-    message_line_edit->setFocus();
+    QString msg_text = input_line->text();
+    input_line->clear();
+    input_line->setFocus();
 
     time_t t = time(NULL);
 
@@ -221,6 +208,7 @@ void MainWindow::sendButtonPressed()
     undelivered_messages.push_back(message);
     delieverMessages();
 
+    // Artifically block sendButton for SEND_INTERVAL milliseconds
     send_button->setEnabled(false);
     send_timer->start(SEND_INTERVAL);
 }
@@ -233,18 +221,23 @@ void MainWindow::sendTimerExpired()
 void MainWindow::handleSocketMessage()
 {
     QHostAddress sender_address;
-    quint16 sender_port;
+    QStringList list;
 
-    QByteArray datagram;
-    datagram.resize( socket->pendingDatagramSize() );
-    socket->readDatagram(datagram.data(), datagram.size(), &sender_address, &sender_port);
+    {
+        quint16 sender_port;
 
-    QString text = QString(datagram.data());
-    text.remove(text.size() - 2, 2); // Remove \r\n
+        QByteArray datagram;
+        datagram.resize( socket->pendingDatagramSize() );
+        socket->readDatagram(datagram.data(), datagram.size(), &sender_address, &sender_port);
 
-    qDebug() << "Datagram arrived! here it is:" << text;
+        QString text = QString(datagram.data());
+        text.remove(text.size() - 2, 2); // Remove \r\n
 
-    QStringList list = text.split(' ');
+        list = text.split(' ');
+
+        qDebug() << "Datagram arrived: " << text;
+    }
+
     QString cmd = list[0];
     list.removeAt(0);
 
@@ -297,11 +290,18 @@ void MainWindow::handleSocketMessage()
     }
     else if ( cmd == "JOIN" )
     {
-        addPeerToList(list[1], QHostAddress(list[0]));
+        QHostAddress newcomer_addr = QHostAddress(list[0]);
+
+        if ( newcomer_addr != my_address )
+        {
+            addPeerToList(list[1], newcomer_addr);
+        }
     }
     else if ( cmd == "QUIT" )
     {
-        removePeerFromList(sender_address);
+        QHostAddress leaver_addr = QHostAddress(list[0]);
+
+        removePeerFromList(leaver_addr);
     }
     else if ( cmd == "GET" )
     {
@@ -313,10 +313,46 @@ void MainWindow::handleSocketMessage()
     }
 }
 
+void MainWindow::sendString(QString what, QHostAddress where)
+{
+    QByteArray datagram;
+    datagram.append(what);
+    datagram.append("\r\n");
+
+    socket->writeDatagram(datagram.data(), datagram.size(), where, PORT);
+
+    qDebug() << "   Send string: " << what
+             << "to " << ( (where != QHostAddress::Broadcast) ? where.toString() : "BROADCAST" );
+}
+
+void MainWindow::sendToEverybody(QString what)
+{
+    qDebug() << "Sending to " << peer_list.size()
+             << " peers in peer list: " << what;
+
+    foreach (Peer *p, peer_list)
+    {
+        sendString(what, p->getAddress());
+    }
+}
+
 void MainWindow::sendHello()
 {
     qDebug() << "Sending HELLO";
     sendString("HELLO " + my_nickname, QHostAddress::Broadcast);
+}
+
+QString MainWindow::responseString()
+{
+    QString msg = "RESPONSE " + my_nickname;
+
+    foreach (Peer *p, peer_list)
+    {
+        msg += " " + p->getAddress().toString() +
+               " " + p->getNickname();
+    }
+
+    return msg;
 }
 
 void MainWindow::sendResponse(QHostAddress to_whom)
@@ -349,11 +385,16 @@ void MainWindow::sendAccepted(QHostAddress to_whom, QString nickname, time_t tim
 
 void MainWindow::sendKeepalive()
 {
+    qDebug() << "Requesting peers to keep me alive";
+
     sendToEverybody("KEEPALIVE");
 }
 
 void MainWindow::sendQuit()
 {
+    qDebug() << "I am disconnecting, so I request peers to remove "
+                "me from their peer lists";
+
     sendToEverybody("QUIT " + my_address.toString());
 }
 
@@ -361,18 +402,24 @@ void MainWindow::delieverMessages()
 {
     qDebug() << "Sending " << undelivered_messages.size() << " undelievered messages";
 
-    for (int i = 0; i < undelivered_messages.size(); ++i)
-        sendMessage(undelivered_messages[i]);
+    foreach (Message msg, undelivered_messages)
+    {
+        sendMessage(msg);
+    }
 }
 
 void MainWindow::delieverConfirmed(QString nickname, time_t time)
 {
+    qDebug() << "Trying to match confirmation for ("
+             << nickname << ", " << time << ")...";
+
     for (int i = 0; i < undelivered_messages.size(); ++i)
         if ( undelivered_messages[i].getAuthorNickname() == nickname &&
              undelivered_messages[i].getTime() == time )
         {
-            qDebug() << "Deliever of message " << undelivered_messages[i].getAuthorNickname() <<
-                        undelivered_messages[i].getTime() << " confirmed!!!";
+            qDebug() << "Delivery of message (" << nickname << ", "
+                     <<  time << ") is confirmed!";
+
             undelivered_messages.removeAt(i);
             return;
         }

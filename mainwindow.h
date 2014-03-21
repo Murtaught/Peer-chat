@@ -6,29 +6,14 @@
 
 #include <ctime>
 
-#include <QWidget>
-#include <QGridLayout>
+#include <QtWidgets>
+#include <QtNetwork>
 
-#include <QString>
-#include <QStringList>
 #include <QVector>
 #include <QList>
 
-#include <QPushButton>
-#include <QTextEdit>
-#include <QLineEdit>
-#include <QListWidget>
-
 #include <QKeyEvent>
 #include <QTimer>
-
-#include <QUdpSocket>
-#include <QNetworkInterface>
-#include <QByteArray>
-#include <QHostAddress>
-
-#include <QPair>
-#include <QDir>
 
 class MainWindow : public QWidget
 {
@@ -64,26 +49,6 @@ private:
 
     QString responseString();
 
-    // fields:
-    QPushButton     *send_button;
-    QTextEdit       *messages_widget;
-    QLineEdit       *message_line_edit;
-    QListWidget     *user_list_widget;
-
-    QTimer          *send_timer;
-    QTimer          *hello_timer;
-    QTimer          *keepalive_timer;
-    QTimer          *deliever_timer;
-
-    QUdpSocket      *socket;
-
-    QString         my_nickname;
-    QHostAddress    my_address;
-
-    QVector<Peer*>  peer_list;
-    HistoryType     chat_history;
-    QList<Message>  undelivered_messages;
-
 private slots:
     void sendButtonPressed();
     void sendTimerExpired();
@@ -105,6 +70,26 @@ private slots:
     void addPeerToList(QString nickname, QHostAddress address);
     void keepPeerAlive(QHostAddress peer_address);
     void removePeerFromList(QHostAddress peer_address);
+
+private:
+    QPushButton     *send_button;
+    QTextEdit       *messages_widget;
+    QLineEdit       *input_line;
+    QListWidget     *user_list_widget;
+
+    QTimer          *send_timer;
+    QTimer          *hello_timer;
+    QTimer          *keepalive_timer;
+    QTimer          *deliver_timer;
+
+    QUdpSocket      *socket;
+
+    QString         my_nickname;
+    QHostAddress    my_address;
+
+    QVector<Peer*>  peer_list;
+    HistoryType     chat_history;
+    QList<Message>  undelivered_messages;
 };
 
 #endif // MAINWINDOW_H
