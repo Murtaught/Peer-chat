@@ -47,7 +47,8 @@ MainWindow::MainWindow(QWidget *parent)
     my_nickname = askUserForNickname();
 
     socket->bind(PORT, QUdpSocket::ShareAddress);
-    QList<QHostAddress> addr = QNetworkInterface::allAddresses();
+
+    /*QList<QHostAddress> addr = QNetworkInterface::allAddresses();
 
     qDebug() << "Avaliable network interfaces:";
     foreach (QHostAddress a, addr)
@@ -66,7 +67,8 @@ MainWindow::MainWindow(QWidget *parent)
         my_address = addr[ 2 ];
         addSystemMessageToWidget(tr("Hello ") + my_nickname + ", your network "
                                  "address is " + my_address.toString());
-    }
+    }*/
+    my_address = QHostAddress::LocalHost;
 
     // Connecting everything
     connect(send_button, SIGNAL(clicked()), this, SLOT(sendButtonPressed()));
@@ -151,16 +153,26 @@ void MainWindow::addPeerToList(QString nickname, QHostAddress address)
              << nickname
              << address.toString();
 
-    if ( address == my_address )
+    if ( nickname == my_nickname && my_address == QHostAddress::LocalHost )
     {
-        qDebug() << "  Its me!";
-        return;
+        qDebug() << "  Now I know my IP address: " << address;
+        my_address = address;
     }
 
     foreach (Peer *p, peer_list)
         if ( address == p->getAddress() )
         {
             qDebug() << "  Already know that buddy";
+
+            if ( nickname != p->getNickname() )
+            {
+                qDebug() << "    But now he has new nickname!"
+                         << "Probably disconnected and reconnected "
+                            "without sending QUIT.";
+
+                p->setNickname(nickname);
+            }
+
             return;
         }
 
@@ -205,8 +217,6 @@ bool MainWindow::addToChatHistory(time_t time, QString author, QString msg)
 void MainWindow::updateUserListWidget()
 {
     user_list_widget->clear();
-
-    user_list_widget->addItem( my_nickname + " (" + my_address.toString() + ")" );
 
     foreach (Peer *p, peer_list)
     {
