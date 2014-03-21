@@ -62,7 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
     else
     {
         // KOSTYL
-        my_address = addr[ 1 ];
+        my_address = addr[ 2 ];
         addSystemMessageToWidget(tr("Hello ") + my_nickname + ", your network "
                                  "address is " + my_address.toString());
     }
@@ -116,38 +116,43 @@ void MainWindow::addMessageToWidget(QString author, QString message)
 
 void MainWindow::addPeerToList(QString nickname, QHostAddress address)
 {
-    Peer *newcomer = new Peer(nickname, address, this);
-
     qDebug() << "Trying to add new peer to list: "
              << nickname
              << address.toString();
 
-    for (int i = 0; i < peer_list.size(); ++i)
-        if ( address == peer_list[i]->getAddress() )
+    if ( address == my_address )
+    {
+        qDebug() << "  Its me!";
+        return;
+    }
+
+    foreach (Peer *p, peer_list)
+        if ( address == p->getAddress() )
         {
-            qDebug() << "Already know that buddy";
-            delete newcomer;
+            qDebug() << "  Already know that buddy";
             return;
         }
 
-    qDebug() << "Added successfully";
+    Peer *newcomer = new Peer(nickname, address, this);
 
     peer_list.push_back(newcomer);
     connect(newcomer, SIGNAL(peerDied(QHostAddress)), this, SLOT(removePeerFromList(QHostAddress)));
 
+    qDebug() << "Added successfully";
+
     user_list_widget->addItem(newcomer->getFormattedString());
-    addSystemMessageToWidget(nickname + " " + tr("connected"));
+    addSystemMessageToWidget( tr("%1 connected").arg( newcomer->getFormattedString() ) );
 }
 
 void MainWindow::keepPeerAlive(QHostAddress peer_address)
 {
-    for (int i = 0; i < peer_list.size(); ++i)
-        if (peer_list[i]->getAddress() == peer_address)
+    foreach (Peer *p, peer_list)
+        if (p->getAddress() == peer_address)
         {
-            qDebug() << peer_list[i]->getNickname()
-                     << peer_list[i]->getAddress().toString() << "kept alive";
+            qDebug() << p->getNickname()
+                     << p->getAddress().toString() << "kept alive";
 
-            peer_list[i]->resetKeepaliveTimer();
+            p->resetKeepaliveTimer();
             return;
         }
 }
@@ -159,6 +164,7 @@ bool MainWindow::addToChatHistory(time_t time, QString author, QString msg)
             return false;
 
     qDebug() << "Added message to history: " << time << author;
+
     chat_history.push_back( qMakePair(time, author) );
     addMessageToWidget(author, msg);
 
@@ -184,12 +190,16 @@ void MainWindow::removePeerFromList(QHostAddress peer_address)
     for (int i = 0; i < peer_list.size(); ++i)
         if (peer_list[i]->getAddress() == peer_address)
         {
-            qDebug() << peer_list[i]->getNickname()
-                     << peer_list[i]->getAddress().toString() << "removed from list";
+            Peer *p = peer_list[i];
 
-            addSystemMessageToWidget(peer_list[i]->getNickname() + " left");
-            peer_list.remove(i);
+            qDebug() << p->getFormattedString() << "removed from list";
+
+            peer_list.removeAt(i);
+
+            addSystemMessageToWidget( tr("%1 left").arg( p->getFormattedString() ) );
             updateUserListWidget();
+
+            p->deleteLater();
             return;
         }
 }
@@ -245,18 +255,25 @@ void MainWindow::handleSocketMessage()
     {
         QString sender_nickname = list[0];
 
-        if ( sender_nickname != my_nickname )
+        if ( sender_address != my_address )
         {
             sendResponse(sender_address);
+
+            addPeerToList(sender_nickname, sender_address);
+            updateUserListWidget();
+
             sendJoin(sender_nickname, sender_address);
         }
     }
     else if ( cmd == "RESPONSE" )
     {
         hello_timer->stop();
+
         addPeerToList(list[0], sender_address);
         for (int i = 1; i < list.size(); i += 2)
             addPeerToList(list[i + 1], QHostAddress(list[i]));
+
+        updateUserListWidget();
     }
     else if ( cmd == "MESSAGE" )
     {
@@ -292,10 +309,8 @@ void MainWindow::handleSocketMessage()
     {
         QHostAddress newcomer_addr = QHostAddress(list[0]);
 
-        if ( newcomer_addr != my_address )
-        {
-            addPeerToList(list[1], newcomer_addr);
-        }
+        addPeerToList(list[1], newcomer_addr);
+        updateUserListWidget();
     }
     else if ( cmd == "QUIT" )
     {

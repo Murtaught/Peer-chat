@@ -13,10 +13,10 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
-    peer.cpp \
-    message.cpp
+           mainwindow.cpp \
+           peer.cpp \
+           message.cpp
 
 HEADERS  += mainwindow.h \
-    peer.h \
-    message.h
+            peer.h \
+            message.h

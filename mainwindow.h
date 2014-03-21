@@ -87,7 +87,7 @@ private:
     QString         my_nickname;
     QHostAddress    my_address;
 
-    QVector<Peer*>  peer_list;
+    QList<Peer*>    peer_list;
     HistoryType     chat_history;
     QList<Message>  undelivered_messages;
 };
