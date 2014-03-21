@@ -2,8 +2,9 @@
 
 #include <QtDebug>
 
-#include <QDir>
 #include <QPair>
+#include <QDir>
+#include <QRegExp>
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
@@ -43,9 +44,9 @@ MainWindow::MainWindow(QWidget *parent)
     messages_widget->setReadOnly(true);
 
     // User information and network routines
-    socket->bind(PORT, QUdpSocket::ShareAddress);
-    my_nickname = QDir::home().dirName();
+    my_nickname = askUserForNickname();
 
+    socket->bind(PORT, QUdpSocket::ShareAddress);
     QList<QHostAddress> addr = QNetworkInterface::allAddresses();
 
     qDebug() << "Avaliable network interfaces:";
@@ -102,6 +103,36 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     }
     else
         QWidget::keyPressEvent(event);
+}
+
+QString MainWindow::askUserForNickname()
+{
+    QString nickname;
+    QRegExp regexp("[^A-Z][^a-z][^0-9][^-_.]");
+
+    forever
+    {
+        nickname = QInputDialog::getText(
+            this,
+            tr("Select your nickname"),
+            tr("Enter your nickname:"),
+            QLineEdit::Normal,
+            QDir::home().dirName()
+        );
+
+        if ( regexp.indexIn(nickname) != -1 )
+        {
+            QMessageBox::warning(
+                this,
+                tr("Select your nickname"),
+                tr("Nickname is invalid!")
+            );
+        }
+        else
+            break;
+    }
+
+    return nickname;
 }
 
 void MainWindow::addSystemMessageToWidget(QString message)

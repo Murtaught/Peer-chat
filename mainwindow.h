@@ -37,6 +37,8 @@ private:
     void keyPressEvent(QKeyEvent *event);
 
     // methods:
+    QString askUserForNickname();
+
     void addSystemMessageToWidget(QString message);
     void addMessageToWidget(QString author, QString message);
 
